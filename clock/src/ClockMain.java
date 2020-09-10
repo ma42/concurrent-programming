@@ -1,9 +1,9 @@
-import clock.io.ClockData;
+import clock.ClockData;
 import clock.io.ClockInput;
 import clock.io.ClockInput.UserInput;
 import clock.io.ClockOutput;
-import clock.io.TimeThread;
-import clock.io.AlarmThread;
+import clock.TimeThread;
+import clock.AlarmThread;
 import java.util.concurrent.Semaphore;
 
 

@@ -1,4 +1,4 @@
-package clock.io;
+package clock;
 
 public class TimeThread implements Runnable {
 	private ClockData clockData;

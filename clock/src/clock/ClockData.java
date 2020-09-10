@@ -1,10 +1,11 @@
-package clock.io;
+package clock;
 
 import clock.AlarmClockEmulator;
-
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import clock.io.ClockInput;
+import clock.io.ClockOutput;
 
 public class ClockData {
 	private AlarmClockEmulator emulator;
