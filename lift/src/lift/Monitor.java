@@ -1,144 +1,110 @@
 package lift;
 
-import java.util.ArrayList;
-import java.util.concurrent.Semaphore;
+import java.util.stream.*;
 
 public class Monitor extends Thread {
-
-	private static final int MAX_LOAD = 4;
-	private static final int NBR_FLOORS = 6;
-
-	int floor; // the floor the lift is currently on
-	boolean moving;
-	boolean goingUp;
-	ArrayList<Person> waitingPersons = new ArrayList<>();
-	ArrayList<Person> loadedPersons = new ArrayList<>();
-	int load; // number of passengers currently in the lift
-	int entering = 0; // Number of people entering the lift right now
-	int exiting = 0;
-	boolean doorsOpen = false;
-
-	Semaphore mutex = new Semaphore(1);
-
-	public boolean liftFull() {
-		return load >= MAX_LOAD;
+	private int currentFloor = 0, load = 0, persEntering = 0, persExiting = 0; 
+	private boolean blockedLift = false; 
+	private boolean goingUp = false;
+	private boolean doorsOpen = false;
+	private int[] persWaitingEnter = new int[7];
+	private int[] persWaitingExit = new int[7];
+	private LiftView view;
+	
+	public Monitor(LiftView view) {
+		this.view = view;
 	}
 
-	private boolean soonFull() {
-		return load + entering >= MAX_LOAD;
+	public synchronized void awaitEntering(int floor) {
+		persWaitingEnter[floor]++;
+		notifyAll();
+		while (floor != currentFloor || load + persEntering - persExiting == 4 || !blockedLift || !doorsOpen) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		persEntering++;
 	}
 
-	public boolean goingUp() {
-		return goingUp;
+	public synchronized void awaitExiting(int floor) {
+		while (floor != currentFloor) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		persExiting++;
+	}
+	
+	public synchronized void personLeft(int destinationFloor) {
+		persWaitingEnter[currentFloor]--;
+		persEntering--;
+		load++;
+		persWaitingExit[destinationFloor]++;
+		
+		if (persWaitingEnter[currentFloor] == 0 && persWaitingExit[currentFloor] == 0) {
+			blockedLift = false;	
+		}
+		
+		if (load == 4 && persEntering == 0 && persExiting == 0) {
+			blockedLift = false;	
+		}
+		notifyAll();
 	}
 
-	public int getFloor() {
-		return floor;
+	public synchronized void personExited() {
+		persWaitingExit[currentFloor]--;
+		persExiting--;
+		load--;
+		if ((persWaitingEnter[currentFloor] == 0 && persWaitingExit[currentFloor] == 0) || (load == 4 && persEntering == 0 && persExiting == 0)) {
+			blockedLift = false;
+		}
+		notifyAll();
 	}
 
-	public synchronized int getNextFloor() {
-		if (floor == 0 || floor == NBR_FLOORS) {
+	public synchronized void awaitMoveLift() {
+		while (blockedLift || (IntStream.of(persWaitingEnter).sum() == 0 && IntStream.of(persWaitingExit).sum() == 0)) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public int getCurrentFloor() {
+		return currentFloor;
+	}
+	
+	public int getNextFloor() {
+		if (currentFloor == 0 || currentFloor == 6) {
 			goingUp = !goingUp;
 		}
 		if (goingUp) {
-			return floor + 1;
+			return currentFloor + 1;
 		} else {
-			return floor - 1;
+			return currentFloor- 1;
 		}
 	}
-
-	public synchronized void setFloor(int floor) {
-		this.floor = floor;
+	
+	public boolean doorsOpen() {
+		return doorsOpen;
+	}
+	
+	public synchronized void toggleDoors() {
+		doorsOpen = !doorsOpen;
 	}
 
-	public synchronized void toggleMoving() {
-		moving = !moving;
-	}
-
-	public boolean isMoving() {
-		return moving;
-	}
-
-	public boolean passengersWantEnter() {
-		for (Person person : waitingPersons) {
-			if (personCanEnter(person) || entering > 0) {
-				return true;
-			}
+	public synchronized void updateFloor(int newFloor) {
+		currentFloor = newFloor;
+		if ((persWaitingEnter[currentFloor] != 0 && load != 4) || persWaitingExit[currentFloor] != 0) {
+			blockedLift = true;
+			view.openDoors(newFloor);
+			doorsOpen = true;
 		}
-		return false;
-	}
-
-	public boolean liftEmpty() {
-		return load == 0;
-	}
-
-	public boolean passengersWantExit() {
-		for (Person person : loadedPersons) {
-			if (personCanExit(person) || exiting > 0) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	public synchronized void enterLift(Person person) {
-		loadedPersons.add(person);
-	}
-
-	public synchronized void addWaitingPerson(Person person) {
-		waitingPersons.add(person);
-	}
-
-	public synchronized void enterWhenAllowed(Person person) throws InterruptedException {
-		while (!personCanEnter(person)) {
-			wait(100);
-		}
-		enterLift(person);
-
-		entering++;
-	}
-
-	public synchronized void completeEntering(Person person) {
-		waitingPersons.remove(person);
-		entering--;
-		load++;
-	}
-
-	public synchronized void exitWhenAllowed(Person person) throws InterruptedException {
-		while (!personCanExit(person)) {
-			wait(100);
-		}
-
-		exiting++;
-	}
-
-	public synchronized void completeExiting(Person person) {
-		loadedPersons.remove(person);
-		exiting--;
-		load--;
-	}
-
-	public synchronized boolean personCanEnter(Person person) {
-		boolean directionCondition;
-
-		if (person.getStartFloor() == 0 || person.getStartFloor() == 6) {
-			directionCondition = true;
-		} else {
-			directionCondition = this.goingUp == person.isGoingUp();
-		}
-
-		return !liftFull() && getFloor() == person.getStartFloor() && doorsOpen && directionCondition && !soonFull();
-	}
-
-	public synchronized boolean personCanExit(Person person) {
-		return getFloor() == person.getDestinationFloor() && doorsOpen;
-	}
-
-	public synchronized void setDoorsOpen(boolean open) {
-		doorsOpen = open;
-	}
-
-	public synchronized boolean personsToServe() {
-		return !(waitingPersons.isEmpty() && loadedPersons.isEmpty());
+		notifyAll();
 	}
 }
