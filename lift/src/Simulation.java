@@ -13,21 +13,12 @@ public class Simulation {
         PersonThread[] persons = new PersonThread[NBR_PERSONS];
 
         for(int i = 0; i < NBR_PERSONS; i++) {
-        	PersonThread person = new PersonThread(view.createPassenger(), monitor);
+        	PersonThread person = new PersonThread(view, monitor);
             persons[i] = person;
             person.start();
         }
         
         LiftThread lift = new LiftThread(view, monitor);
         lift.start();
-        
-        while(true) {
-        	for(int i = 0; i < NBR_PERSONS; i++) {
-        		if(!persons[i].isAlive()) {
-            		persons[i] = new PersonThread(view.createPassenger(), monitor);
-            		persons[i].start();
-        		}
-        	}
-        }
     }
 }
