@@ -1,8 +1,6 @@
 import java.math.BigInteger;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
@@ -34,24 +32,15 @@ public class CodeBreaker implements SnifferCallback {
         
         w.enableErrorChecks();
     }
-    
     // -----------------------------------------------------------------------
     
     public static void main(String[] args) {
-
-        /*
-         * Most Swing operations (such as creating view elements) must be performed in
-         * the Swing EDT (Event Dispatch Thread).
-         * 
-         * That's what SwingUtilities.invokeLater is for.
-         */
 
         SwingUtilities.invokeLater(() -> {
             CodeBreaker codeBreaker = new CodeBreaker();
             new Sniffer(codeBreaker).start();
         });
     }
-
     // -----------------------------------------------------------------------
 
     /** Called by a Sniffer thread when an encrypted message is obtained. */
@@ -127,8 +116,10 @@ public class CodeBreaker implements SnifferCallback {
 	}
 	
 	private void cancelDecryption(ProgressItem progressItem) {
-		int remainingProcess = progressItem.cancelTask();
-		progressItem.getRemoveButton().addActionListener(e -> { progressList.remove(progressItem); });
-		mainProgressBar.setValue(mainProgressBar.getValue() + remainingProcess);
-	}
+        SwingUtilities.invokeLater(() -> {
+			int remainingProcess = progressItem.cancelTask();
+			progressItem.getRemoveButton().addActionListener(e -> { progressList.remove(progressItem); });
+			mainProgressBar.setValue(mainProgressBar.getValue() + remainingProcess);
+        });
+    }
 }

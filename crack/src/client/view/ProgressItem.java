@@ -91,7 +91,7 @@ public class ProgressItem extends ConvenientPanel {
     	task.cancel(true);
     	textArea.setText("[cancelled]");
     	int progress = progressBar.getValue();
-    	//progressBar.setValue(progressBar.getMaximum());
+    	progressBar.setValue(progressBar.getMaximum());
     	remove(cancelButton);
     	add(removeButton);
     	return progressBar.getMaximum() - progress;
