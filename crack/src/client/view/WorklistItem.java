@@ -23,11 +23,10 @@ public class WorklistItem extends ConvenientPanel {
     private static final Font MESSAGE_FONT = new Font(Font.MONOSPACED, Font.PLAIN, 12);
     private JButton button = new JButton("Break");
     
-    public JButton getButton() {
+    public JButton getBreakButton() {
     	return button;
     }
     
-
     /** Create the panel, displaying the integer _n_ and the encrypted message _code_. */
     public WorklistItem(BigInteger n, String code) {
         setBorder(BorderFactory.createTitledBorder("N=" + n + " (" + n.bitLength() + " bits)"));

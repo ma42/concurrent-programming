@@ -56,7 +56,7 @@ public class CodeBreaker implements SnifferCallback {
 	private void handleRecievedMessage(String message, BigInteger n) {
     	WorklistItem recievedMessage = new WorklistItem(n, message);
     	
-    	recievedMessage.getButton().addActionListener((e) -> {
+    	recievedMessage.getBreakButton().addActionListener((e) -> {
     		startBreaking(recievedMessage, message, n);	
     	});
     	workList.add(recievedMessage);
@@ -69,7 +69,7 @@ public class CodeBreaker implements SnifferCallback {
 		 mainProgressBar.setMaximum(mainProgressBar.getMaximum() + MAIN_PROGRESS_VALUE_UPDATE);
 		 
 		 progressItem.getCancelButton().addActionListener((e) -> {
-    		cancelDecryption(progressItem);	
+    		progressItem.getTask().cancel(true);
     	});
 		 progressList.add(progressItem);
 		 workList.remove(worklistItem);
@@ -97,29 +97,30 @@ public class CodeBreaker implements SnifferCallback {
 	        try {
 				String plainText = Factorizer.crack(message, n, tracker);
 				SwingUtilities.invokeLater(() -> {
-					handleDecryptedProgressItem(progressItem, plainText);
+					progressItem.getTextArea().setText(plainText);
+					addRemoveButton(progressItem);
                 });
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+		        SwingUtilities.invokeLater(() -> {
+			    	progressItem.getTextArea().setText("[cancelled]");
+			    	progressItem.getProgressBar().getValue();
+			    	int value = progressItem.getProgressBar().getValue();
+			    	int max = progressItem.getProgressBar().getMaximum();
+			    	addRemoveButton(progressItem);
+			    	progressItem.getProgressBar().setValue(max);
+					mainProgressBar.setValue(mainProgressBar.getValue() + max-value);
+		        });
 			}
        };
        progressItem.addTask(threadPool.submit(crackMessage));
 	}
-	
-	/** Updates the ProgressItem when the message is encrypted. */
-	private void handleDecryptedProgressItem(ProgressItem progressItem, String decryptedMessage) {
-		progressItem.getTextArea().setText(decryptedMessage);
-        progressItem.addRemoveButton();
-        progressItem.getRemoveButton().addActionListener(e -> { progressList.remove(progressItem); });
-        mainProgressBar.setValue(mainProgressBar.getValue() - MAIN_PROGRESS_VALUE_UPDATE);
-        mainProgressBar.setMaximum(mainProgressBar.getMaximum() - MAIN_PROGRESS_VALUE_UPDATE);
+
+	private void addRemoveButton(ProgressItem progressItem) {
+		progressItem.addRemoveButton().addActionListener(e -> { 
+			progressList.remove(progressItem); 
+	        mainProgressBar.setValue(mainProgressBar.getValue() - MAIN_PROGRESS_VALUE_UPDATE);
+	        mainProgressBar.setMaximum(mainProgressBar.getMaximum() - MAIN_PROGRESS_VALUE_UPDATE);
+		});
+		
 	}
-	
-	private void cancelDecryption(ProgressItem progressItem) {
-        SwingUtilities.invokeLater(() -> {
-			int remainingProcess = progressItem.cancelTask();
-			progressItem.getRemoveButton().addActionListener(e -> { progressList.remove(progressItem); });
-			mainProgressBar.setValue(mainProgressBar.getValue() + remainingProcess);
-        });
-    }
 }

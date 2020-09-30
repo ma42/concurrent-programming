@@ -70,31 +70,22 @@ public class ProgressItem extends ConvenientPanel {
         return textArea;
     }
     
-    public JButton getRemoveButton() {
-        return removeButton;
-    }
-    
     public JButton getCancelButton() {
         return cancelButton;
     }
     
-    public void addRemoveButton() {
+    public JButton addRemoveButton() {
     	add(removeButton);
     	remove(cancelButton);
+    	return removeButton;
     }
     
     public void addTask(Future<?> task) {
     	this.task = task;
     }
     
-    public int cancelTask() {
-    	task.cancel(true);
-    	textArea.setText("[cancelled]");
-    	int progress = progressBar.getValue();
-    	progressBar.setValue(progressBar.getMaximum());
-    	remove(cancelButton);
-    	add(removeButton);
-    	return progressBar.getMaximum() - progress;
+    public Future<?> getTask() {
+    	return task;
     }
 
     @Override
